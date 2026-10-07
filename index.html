@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Strategic Initiatives Progress Dashboard</title>
+  <style>
+    :root {
+      --bg: #090d1a;
+      --card-bg: #11182c;
+      --card-inner: #16203b;
+      --border: rgba(255, 255, 255, 0.08);
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --primary: #38bdf8;
+      --success: #34d399;
+      --warning: #fbbf24;
+      --purple: #a78bfa;
+      --rose: #fb7185;
+      --shadow: 0 20px 30px rgba(0, 0, 0, 0.35);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 36px 48px;
+    }
+
+    /* Ambient glow */
+    .glow {
+      position: fixed;
+      top: 0; right: 0;
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(56, 189, 248, 0.08) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      max-width: 1540px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Top Bar */
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .title-area h1 {
+      font-size: 30px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .status-badge {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 4px 12px;
+      border-radius: 999px;
+      background: rgba(52, 211, 153, 0.14);
+      color: var(--success);
+      border: 1px solid rgba(52, 211, 153, 0.25);
+    }
+
+    .title-area p {
+      color: var(--muted);
+      font-size: 14px;
+      margin-top: 6px;
+    }
+
+    /* Quick KPI Row */
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 18px;
+      margin-bottom: 32px;
+    }
+
+    .kpi-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px 20px;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .kpi-card::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+    }
+    .kpi-card.g1::before { background: linear-gradient(90deg, #38bdf8, #0284c7); }
+    .kpi-card.g2::before { background: linear-gradient(90deg, #f43f5e, #fb7185); }
+    .kpi-card.g3::before { background: linear-gradient(90deg, #34d399, #10b981); }
+    .kpi-card.g4::before { background: linear-gradient(90deg, #a78bfa, #8b5cf6); }
+
+    .kpi-title {
+      font-size: 11.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .kpi-value {
+      font-size: 26px;
+      font-weight: 800;
+      color: #fff;
+    }
+    .kpi-sub {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    /* Goal Section Container */
+    .goals-grid {
+      display: grid;
+      gap: 32px;
+    }
+
+    .goal-block {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 26px 28px;
+      box-shadow: var(--shadow);
+    }
+
+    .goal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .goal-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .goal-pill {
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      padding: 5px 12px;
+      border-radius: 8px;
+      text-transform: uppercase;
+    }
+    .goal-pill.blue { background: rgba(56, 189, 248, 0.14); color: var(--primary); }
+    .goal-pill.red { background: rgba(251, 113, 133, 0.14); color: var(--rose); }
+    .goal-pill.green { background: rgba(52, 211, 153, 0.14); color: var(--success); }
+    .goal-pill.purple { background: rgba(167, 139, 250, 0.14); color: var(--purple); }
+
+    .goal-header h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .goal-meta {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    /* Project Cards Grid */
+    .project-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+      gap: 18px;
+    }
+
+    .project-card {
+      background: var(--card-inner);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .project-card:hover {
+      border-color: rgba(255, 255, 255, 0.16);
+      transform: translateY(-2px);
+    }
+
+    .project-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+      gap: 10px;
+    }
+
+    .project-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 1.3;
+    }
+
+    .tag-status {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 999px;
+      white-space: nowrap;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .tag-status.done { background: rgba(52, 211, 153, 0.15); color: #6ee7b7; border: 1px solid rgba(52, 211, 153, 0.3); }
+    .tag-status.progress { background: rgba(56, 189, 248, 0.15); color: #7dd3fc; border: 1px solid rgba(56, 189, 248, 0.3); }
+    .tag-status.poc { background: rgba(167, 139, 250, 0.15); color: #c4b5fd; border: 1px solid rgba(167, 139, 250, 0.3); }
+    .tag-status.planned { background: rgba(251, 191, 36, 0.15); color: #fde047; border: 1px solid rgba(251, 191, 36, 0.3); }
+
+    .project-body {
+      margin-bottom: 14px;
+      font-size: 13.5px;
+      color: #cbd5e1;
+      line-height: 1.5;
+    }
+
+    .project-bullets {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .project-bullets li {
+      position: relative;
+      padding-left: 18px;
+      font-size: 13px;
+      color: #cbd5e1;
+    }
+    .project-bullets li::before {
+      content: "•";
+      position: absolute;
+      left: 4px;
+      color: var(--primary);
+      font-weight: bold;
+    }
+
+    .highlight-box {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px dashed var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-top: 10px;
+      font-size: 12.5px;
+      color: #94a3b8;
+    }
+    .highlight-box strong { color: #f1f5f9; }
+
+    /* Progress bar */
+    .progress-bar-wrap {
+      margin: 10px 0 6px;
+    }
+    .progress-bar {
+      height: 7px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--primary), var(--purple));
+    }
+
+    /* Stepper for Data Governance */
+    .step-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .step-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 10px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.02);
+      font-size: 12.5px;
+    }
+    .step-name {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #cbd5e1;
+    }
+    .step-badge {
+      font-size: 10.5px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 4px;
+    }
+
+    .project-footer {
+      border-top: 1px solid var(--border);
+      padding-top: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: auto;
+    }
+    .next-milestone {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    /* Print & Responsive */
+    @media (max-width: 1100px) {
+      .kpi-row { grid-template-columns: repeat(2, 1fr); }
+      body { padding: 24px; }
+    }
+    @media (max-width: 768px) {
+      .kpi-row { grid-template-columns: 1fr; }
+      .project-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="glow"></div>
+  <div class="container">
+    
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="title-area">
+        <h1>
+          Strategic Initiatives Progress Dashboard
+          <span class="status-badge">● Active · FY26 / FY27</span>
+        </h1>
+        <p>Comprehensive status update across AI Platform Foundations, Cyber Supply-Chain Risk Control, Common Plan Data, and Second Cloud Readiness.</p>
+      </div>
+      <div style="font-size: 13px; color: var(--muted); text-align: right;">
+        <div>Reporting Period: <strong>October 2026 Update</strong></div>
+        <div style="margin-top: 4px;">4 Strategic Goals · 11 Active Workstreams</div>
+      </div>
+    </header>
+
+    <!-- Top KPI Highlights -->
+    <div class="kpi-row">
+      <div class="kpi-card g1">
+        <div class="kpi-title">Goal 1 · AI & Risk</div>
+        <div class="kpi-value">4 Workstreams</div>
+        <div class="kpi-sub">SRE Agent POC, Testing POC Done, 1,709 Tables Audited</div>
+      </div>
+      <div class="kpi-card g2">
+        <div class="kpi-title">Goal 2 · Cyber Supply-Chain</div>
+        <div class="kpi-value">28% Rollout</div>
+        <div class="kpi-sub">K8S/Istio Test Done · Prod Post-D11 Freeze · OIDC POC Done</div>
+      </div>
+      <div class="kpi-card g3">
+        <div class="kpi-title">Goal 3 · Common Plan Data</div>
+        <div class="kpi-value">60% Tagging</div>
+        <div class="kpi-sub">Range Tagging +20% · Semantic Layer POC in Oct · Phase 2 Scope</div>
+      </div>
+      <div class="kpi-card g4">
+        <div class="kpi-title">Goal 4 · Second Cloud</div>
+        <div class="kpi-value">Stage 1-2 Done</div>
+        <div class="kpi-sub">CDH Core Recovery Data Done · Huawei Cloud Sprint 3 Kickoff</div>
+      </div>
+    </div>
+
+    <!-- Goals Section -->
+    <div class="goals-grid">
+
+      <!-- GOAL 1 -->
+      <section class="goal-block">
+        <div class="goal-header">
+          <div class="goal-title-wrap">
+            <span class="goal-pill blue">Goal 1</span>
+            <h2>AI Capability & Risk Mitigation</h2>
+          </div>
+          <div class="goal-meta">Platform Foundation Key Updates across 4 Key Projects</div>
+        </div>
+
+        <div class="project-grid">
+          <!-- 1.1 -->
+          <div class="project-card">
+            <div>
+              <div class="project-header">
+                <div class="project-name">AI Agent for Automated Troubleshooting (SRE Agent)</div>
+                <span class="tag-status progress">In Progress</span>
+              </div>
+              <div class="project-body">
+                Requirements analysis, project planning, and technical architecture design are in progress alongside early POC implementations.
+                <ul class="project-bullets">
+                  <li><strong>API Readiness:</strong> Core APIs required by SRE Agent have been developed.</li>
+                  <li><strong>Architecture Evaluation:</strong> Assessing 3 candidate approaches: (1) AI Genie integration (aligned with Guan Hao), (2) Vendor SaaS (Bailian trial environment configured & evaluated), and (3) Full in-house custom build.</li>
+                </ul>
+              </div>
+            </div>
+            <div class="project-footer">
+              <span>Owner: Platform / SRE</span>
+              <span class="next-milestone">Target: Finalize Architecture in Oct</span>
+            </div>
+          </div>
+
+          <!-- 1.2 -->
+          <div class="project-card">
+            <div>
+              <div class="project-header">
+                <div class="project-name">AI Foundation & Governance</div>
+                <span class="tag-status progress">Gap Analysis</span>
+              </div>
+              <div class="project-body">
+                Governance requirements have been formalized. Currently executing detailed gap analysis against MAP to maximize capability reuse; unfulfilled capabilities will form the core FY27 roadmap.
+                <div class="highlight-box">
+                  <strong>Key Capabilities in Scope:</strong>
+                  <div style="margin-top: 4px; display: flex; flex-wrap: wrap; gap: 6px;">
+                    <span style="background: rgba(56,189,248,0.12); padding: 2px 8px; border-radius: 4px; font-size: 11.5px; color: #7dd3fc;">Unified Tool Gateway</span>
+                    <span style="background: rgba(56,189,248,0.12); padding: 2px 8px; border-radius: 4px; font-size: 11.5px; color: #7dd3fc;">Agent Identity Registry</span>
+                    <span style="background: rgba(56,189,248,0.12); padding: 2px 8px; border-radius: 4px; font-size: 11.5px; color: #7dd3fc;">LLM Egress Gateway</span>
+                    <span style="background: rgba(56,189,248,0.12); padding: 2px 8px; border-radius: 4px; font-size: 11.5px; color: #7dd3fc;">Skill Safety Pipeline</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="project-footer">
+              <span>Reuse: MAP Platform</span>
+              <span class="next-milestone">Deliverable: FY27 Scope Baseline</span>
+            </div>
+          </div>
+
+          <!-- 1.3 -->
+          <div class="project-card">
+            <div>
+              <div class="project-header">
+                <div class="project-name">AI Testing Management</div>
+                <span class="tag-status poc">POC Completed</span>
+              </div>
+              <div class="project-body">
+                Successful POC completion for intelligent test case design. Integrated with AI Genie for automated AI test suite generation with human review/modification workflows.
+                <ul class="project-bullets">
+                  <li><strong>Core Engine:</strong> Hard guardrails, pre-save self-healing validation, and incremental <code>_ai_index</code> verified.</li>
+                  <li><strong>Adoption Pathway:</strong> Transitioning from API-based generation to a domain-facing management UI portal.</li>
+                </ul>
+              </div>
+            </div>
+            <div class="project-footer">
+              <span>Status: Core Engine Verified</span>
+              <span class="next-milestone">Next: UI Portal for Domain Adoption</span>
+            </div>
+          </div>
+
+          <!-- 1.4 -->
+          <div class="project-card" style="grid-column: span 1 / -1;">
+            <div>
+              <div class="project-header">
+                <div class="project-name">AI Data Governance & Redundant Asset Deprecation</div>
+                <span class="tag-status progress">Execution (Staged)</span>
+              </div>
+              <div class="project-body">
+                Structured 6-phase initiative to eliminate redundant and empty tables, streamline pipeline dependencies, and enforce sustained asset health.
+                
+                <div class="step-list">
+                  <div class="step-item">
+                    <span class="step-name"><span>1.</span> Standardized data cleanup & archiving process design</span>
+                    <span class="step-badge" style="background: rgba(52,211,153,0.15); color: #6ee7b7;">100% Done</span>
+                  </div>
+                  <div class="step-item">
+                    <span class="step-name"><span>2.</span> Selected 1,709 suspected empty tables in P1 for pilot; completed dependency analysis</span>
+                    <span class="step-badge" style="background: rgba(52,211,153,0.15); color: #6ee7b7;">100% Done</span>
+                  </div>
+                  <div class="step-item">
+                    <span class="step-name"><span>3.</span> DE & DA asset owner confirmation & sign-off prior to holidays</span>
+                    <span class="step-badge" style="background: rgba(56,189,248,0.15); color: #7dd3fc;">90% · Ready to Archive</span>
+                  </div>
+                  <div class="step-item">
+                    <span class="step-name"><span>4.</span> PAI daily temporary table generation alignment & subsequent migration batching</span>
+                    <span class="step-badge" style="background: rgba(56,189,248,0.15); color: #7dd3fc;">80% · In Progress</span>
+                  </div>
+                  <div class="step-item">
+                    <span class="step-name"><span>5.</span> Scope expansion to P1, P2 & other project spaces (asset inventory complete)</span>
+                    <span class="step-badge" style="background: rgba(56,189,248,0.15); color: #7dd3fc;">70% · Staged Batches</span>
+                  </div>
+                  <div class="step-item">
+                    <span class="step-name"><span>6.</span> Form permanent data asset lifecycle management mechanism</span>
+                    <span class="step-badge" style="background: rgba(251,191,36,0.15); color: #fde047;">To-Do · Post-Pilot</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="project-footer">
+              <span>Pilot Scope: 1,709 P1 Tables</span>
+              <span class="next-milestone">Next: Execute Deprecation & Lifecycle Policy</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- GOAL 2 -->
+      <section class="goal-block">
+        <div class="goal-header">
+          <div class="goal-title-wrap">
+            <span class="goal-pill red">Goal 2</span>
+            <h2>Cyber Supply-Chain Risk Control</h2>
+          </div>
+          <div class="goal-meta">Vulnerability Remediation & Credential Architecture</div>
+        </div>
+
+        <div class="project-grid">
+          <!-- 2.1 -->
+          <div class="project-card">
+            <div>
+              <div class="project-header">
+                <div class="project-name">Service / Component Upgrade & Vulnerability Remediation</div>
+                <span class="tag-status progress">28% Completed</span>
+              </div>
+              <div class="project-body">
+                Systematic dependency upgrades to patch security vulnerabilities and harden infrastructure security posture.
+                <ul class="project-bullets">
+                  <li><strong>Non-Prod Milestone:</strong> Successfully completed Istio and app-test K8S cluster upgrades in test environments.</li>
+                  <li><strong>Prod Scheduling:</strong> Production deployment scheduled immediately following the Double 11 (11.11) code freeze window.</li>
+                </ul>
+                <div class="progress-bar-wrap">
+                  <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; color: var(--muted);">
+                    <span>Overall Upgrade Progress</span>
+                    <strong style="color: #fff;">28%</strong>
+                  </div>
+                  <div class="progress-bar">
+                    <div class="progress-fill" style="width: 28%; background: linear-gradient(90deg, var(--rose), var(--warning));"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="project-footer">
+              <span>Scope: Istio & K8S Stack</span>
+              <span class="next-milestone">Milestone: Prod Rollout Post-D11 Freeze</span>
+            </div>
+          </div>
+
+          <!-- 2.2 -->
+          <div class="project-card">
+            <div>
+              <div class="project-header">
+                <div class="project-name">Secret Key & Credential Governance</div>
+                <span class="tag-status poc">POC Done · Hiring</span>
+              </div>
+              <div class="project-body">
+                Comprehensive audit and elimination of static credentials across digital services.
+                <ul class="project-bullets">
+                  <li><strong>OIDC Technical Solution:</strong> Successfully verified short-term OIDC authentication architecture POC, paving the path to eliminate permanent static secrets.</li>
+                  <li><strong>Resource Onboarding:</strong> Fixed-Term Contractor (FTC) talent acquisition is actively underway to scale hands-on implementation and system refactoring.</li>
+                </ul>
+              </div>
+            </div>
+            <div class="project-footer">
+              <span>Architecture: OIDC Federation</span>
+              <span class="next-milestone">Next: FTC Onboarding & Implementation</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- GOAL 3 -->
+      <section class="goal-block">
+        <div class="goal-header">
+          <div class="goal-title-wrap">
+            <span class="goal-pill green">Goal 3</span>
+            <h2>Common Plan Data Foundation & Development</h2>
+          </div>
+          <div class="goal-meta">Semantic Consistency, Automated Tagging & Data Harmonization</div>
+        </div>
+
+        <div class="project-grid">
+          <!-- 3.1 -->
+          <div class="project-card">
+            <div>
+              <div class="project-header">
+                <div class="project-name">Content Space AI Tagging</div>
+                <span class="tag-status done">Coverage: 60%</span>
+              </div>
+              <div class="project-body">
+                Scaling automated semantic tagging across enterprise content repositories.
+                <div class="progress-bar-wrap" style="margin-top: 14px;">
+                  <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; color: var(--muted);">
+                    <span>Range Tagging Coverage</span>
+                    <strong style="color: #6ee7b7;">40% ➔ 60% (+20%)</strong>
+                  </div>
+                  <div class="progress-bar">
+                    <div class="progress-fill" style="width: 60%; background: linear-gradient(90deg, #34d399, #059669);"></div>
+                  </div>
+                </div>
+                <p style="margin-top: 10px; font-size: 12.5px; color: #94a3b8;">
+                  Delivered +20% jump in automated range tagging coverage, enriching discoverability and downstream recommendation algorithms.
+                </p>
+              </div>
+            </div>
+            <div class="project-footer">
+              <span>Domain: Content Asset Space</span>
+              <span class="next-milestone">Status: Delivered 60% Milestone</span>
+            </div>
+          </div>
+
+          <!-- 3.2 -->
+          <div class="project-card">
+            <div>
+              <div class="project-header">
+                <div class="project-name">Data Semantic Layer</div>
+                <span class="tag-status progress">POC in Oct</span>
+              </div>
+              <div class="project-body">
+                Establishing a single source of truth for unified business metrics and eliminating reporting discrepancies.
+                <ul class="project-bullets">
+                  <li><strong>Metric Standardization:</strong> Completed unified business metric criteria definitions across core domains.</li>
+                  <li><strong>Validation Timeline:</strong> Formal architectural POC verification is scheduled to execute within October.</li>
+                </ul>
+              </div>
+            </div>
+            <div class="project-footer">
+              <span>Value: Single Source of Truth</span>
+              <span class="next-milestone">Next: Execute Architecture POC in Oct</span>
+            </div>
+          </div>
+
+          <!-- 3.3 -->
+          <div class="project-card">
+            <div>
+              <div class="project-header">
+                <div class="project-name">One Data Phase 2</div>
+                <span class="tag-status planned">Scope Alignment</span>
+              </div>
+              <div class="project-body">
+                Progressing the next generation unified data architecture in close alignment with global governance.
+                <ul class="project-bullets">
+                  <li><strong>Global Coordination:</strong> Collaborating with Global Product Managers to align proposal scope and cross-regional architectural standards.</li>
+                  <li><strong>Charter Finalization:</strong> Establishing baseline deliverables, migration tracks, and regional implementation timelines.</li>
+                </ul>
+              </div>
+            </div>
+            <div class="project-footer">
+              <span>Stakeholder: Global Data PM</span>
+              <span class="next-milestone">Next: Phase 2 Scope Sign-Off</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- GOAL 4 -->
+      <section class="goal-block">
+        <div class="goal-header">
+          <div class="goal-title-wrap">
+            <span class="goal-pill purple">Goal 4</span>
+            <h2>Second Cloud Foundation & Multi-Cloud Readiness</h2>
+          </div>
+          <div class="goal-meta">Disaster Recovery Resilience & Huawei Cloud Operation Enablement</div>
+        </div>
+
+        <div class="project-grid">
+          <!-- 4.1 -->
+          <div class="project-card">
+            <div>
+              <div class="project-header">
+                <div class="project-name">Data Backup & Disaster Recovery (CDH)</div>
+                <span class="tag-status done">Stages 1 & 2 Done</span>
+              </div>
+              <div class="project-body">
+                Resilience engineering for critical China Digital Hub data assets.
+                <ul class="project-bullets">
+                  <li><strong>Completed Stages:</strong> Stage 1 & 2 backup pipelines completed for CDH mission-critical key recovery data.</li>
+                  <li><strong>Upcoming Scope:</strong> Stage 3 backup execution (including RCMP data assets) scheduled to initiate in November.</li>
+                </ul>
+              </div>
+            </div>
+            <div class="project-footer">
+              <span>Coverage: CDH Key Recovery Data</span>
+              <span class="next-milestone">Next: Stage 3 (RCMP Data) Kickoff in Nov</span>
+            </div>
+          </div>
+
+          <!-- 4.2 -->
+          <div class="project-card" style="grid-column: span 2;">
+            <div>
+              <div class="project-header">
+                <div class="project-name">BR & Multi-Cloud Operational Readiness (Huawei Cloud)</div>
+                <span class="tag-status progress">Sprint 3 Kickoff</span>
+              </div>
+              <div class="project-body">
+                Tri-pillar multi-cloud readiness initiative encompassing Engineering, CNOS, and Data team collaboration.
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 12px;">
+                  <div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 10px; border: 1px solid var(--border);">
+                    <strong style="color: #c4b5fd; display: block; margin-bottom: 4px; font-size: 13px;">1. Engineering (EP)</strong>
+                    <p style="font-size: 12.5px; color: #94a3b8;">
+                      Deliverables defined. Infra & platform setup starts Oct 12 (Sprint 3), alongside the full project roadmap release.
+                    </p>
+                  </div>
+                  <div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 10px; border: 1px solid var(--border);">
+                    <strong style="color: #c4b5fd; display: block; margin-bottom: 4px; font-size: 13px;">2. CNOS Operations</strong>
+                    <p style="font-size: 12.5px; color: #94a3b8;">
+                      Pre-holiday joint operational framework discussions initiated; ongoing alignment on 2nd cloud operational handover.
+                    </p>
+                  </div>
+                  <div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 10px; border: 1px solid var(--border);">
+                    <strong style="color: #c4b5fd; display: block; margin-bottom: 4px; font-size: 13px;">3. Data Team Alignment</strong>
+                    <p style="font-size: 12.5px; color: #94a3b8;">
+                      Synchronized cross-cloud data replication models and collaborative readiness planning with Data leads.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="project-footer">
+              <span>Co-leads: Engineering · CNOS · Data</span>
+              <span class="next-milestone">Next: Sprint 3 Infra Setup & Roadmap Delivery (Oct 12)</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</body>
+</html>
