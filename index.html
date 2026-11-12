@@ -343,6 +343,11 @@
       font-weight: 600;
     }
 
+    input.tag-status {
+      font-family: inherit; width: 180px; max-width: 100%; min-width: 0;
+      box-sizing: border-box; padding: 6px 9px;
+    }
+    input.tag-status:focus { outline: 2px solid #38bdf8; outline-offset: 2px; }
     .monthly-tools, .monthly-heading {
       display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
     }
@@ -406,7 +411,7 @@
       <button id="export-updates" type="button">Export backup</button>
       <label for="import-updates">Restore backup</label>
       <input id="import-updates" type="file" accept=".json,application/json">
-      <span>Private browser drafts only · not synced or published · export regularly. Existing status is the October baseline.</span>
+      <span>Click any status tag to edit. Status and monthly notes are private browser drafts · not synced or published · export regularly. Unedited status is the October baseline.</span>
       <div id="monthly-feedback" role="status" aria-live="polite"></div>
     </div>
 
@@ -791,6 +796,25 @@
         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       const cards = [...document.querySelectorAll('.project-card')];
       const topicIds = cards.map(card => card.querySelector('.project-name').textContent.trim());
+      const statusInputs = cards.map((card, index) => {
+        const tag = card.querySelector('.tag-status');
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = tag.className;
+        input.maxLength = 120;
+        input.defaultValue = tag.textContent.trim();
+        input.value = input.defaultValue;
+        input.setAttribute('aria-label', topicIds[index] + ' — latest status');
+        input.title = 'Edit latest status (saved in this browser only)';
+        tag.replaceWith(input);
+        input.addEventListener('input', () => {
+          if (!state.statuses) state.statuses = {};
+          state.statuses[topicIds[index]] = input.value;
+          if (storageReadable) save();
+          else feedback.textContent = 'Status edited in memory only. Export before leaving; stored drafts could not be loaded.';
+        });
+        return input;
+      });
       const feedback = document.getElementById('monthly-feedback');
       let state = { version: 1, months: [initialMonth], updates: {} };
       let storageReadable = true;
@@ -808,6 +832,14 @@
           for (const [month, text] of Object.entries(updates)) {
             if (!value.months.includes(month) || typeof text !== 'string' ||
                 text.length > 10000) throw new Error('Invalid update text or month.');
+          }
+        }
+        if (value.statuses !== undefined) {
+          if (!value.statuses || typeof value.statuses !== 'object' ||
+              Array.isArray(value.statuses)) throw new Error('Invalid status backup format.');
+          for (const [topic, text] of Object.entries(value.statuses)) {
+            if (!topicIds.includes(topic) || typeof text !== 'string' ||
+                text.length > 120) throw new Error('Invalid topic status.');
           }
         }
         return value;
@@ -835,6 +867,9 @@
       }
       if (!state.months.includes(initialMonth)) state.months.push(initialMonth);
       function render(persist = true) {
+        statusInputs.forEach((input, index) => {
+          input.value = state.statuses?.[topicIds[index]] ?? input.defaultValue;
+        });
         cards.forEach((card, index) => {
           card.querySelector('.monthly-updates')?.remove();
           const group = document.createElement('div');
