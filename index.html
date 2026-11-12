@@ -343,6 +343,32 @@
       font-weight: 600;
     }
 
+    .monthly-tools, .monthly-heading {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+    }
+    .monthly-tools {
+      margin: 20px 0; padding: 14px; border: 1px solid var(--border);
+      border-radius: 12px; color: var(--muted); font-size: 13px;
+    }
+    .monthly-tools button, .monthly-tools input {
+      font: inherit; padding: 7px 10px; border-radius: 6px;
+      border: 1px solid #475569; background: #172033; color: #e2e8f0;
+    }
+    .monthly-tools button { cursor: pointer; }
+    .monthly-updates { margin: 14px 0; }
+    .monthly-entry { margin-top: 12px; }
+    .monthly-heading { justify-content: space-between; margin-bottom: 6px; }
+    .monthly-heading label { color: #7dd3fc; font-size: 13px; font-weight: 700; }
+    .monthly-heading small { font-size: 11px; color: var(--muted); }
+    .monthly-entry textarea {
+      display: block; width: 100%; min-height: 100px; resize: vertical;
+      box-sizing: border-box; padding: 10px 12px; border-radius: 8px;
+      border: 1px solid #475569; background: rgba(15,23,42,.65);
+      color: #e2e8f0; font: inherit; font-size: 13px; line-height: 1.6;
+    }
+    .monthly-entry textarea:focus { outline: 2px solid #38bdf8; outline-offset: 2px; }
+    #monthly-feedback { width: 100%; }
+
     /* Print & Responsive */
     @media (max-width: 1100px) {
       .kpi-row { grid-template-columns: repeat(2, 1fr); }
@@ -372,6 +398,17 @@
         <div style="margin-top: 4px;">4 Strategic Goals · 11 Active Workstreams</div>
       </div>
     </header>
+
+    <div class="monthly-tools">
+      <label for="update-month">Monthly update</label>
+      <input id="update-month" type="month" value="2026-11" min="2020-01" max="2099-12">
+      <button id="add-month" type="button">Add month to all topics</button>
+      <button id="export-updates" type="button">Export backup</button>
+      <label for="import-updates">Restore backup</label>
+      <input id="import-updates" type="file" accept=".json,application/json">
+      <span>Private browser drafts only · not synced or published · export regularly. Existing status is the October baseline.</span>
+      <div id="monthly-feedback" role="status" aria-live="polite"></div>
+    </div>
 
     <!-- Top KPI Highlights -->
     <div class="kpi-row">
@@ -746,5 +783,147 @@
 
     </div>
   </div>
+  <script>
+    (() => {
+      const key = 'fa3-monthly-updates-v1';
+      const initialMonth = '2026-11';
+      const names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const cards = [...document.querySelectorAll('.project-card')];
+      const topicIds = cards.map(card => card.querySelector('.project-name').textContent.trim());
+      const feedback = document.getElementById('monthly-feedback');
+      let state = { version: 1, months: [initialMonth], updates: {} };
+      let storageReadable = true;
+      const validMonth = value => typeof value === 'string' &&
+        /^(20\d{2})-(0[1-9]|1[0-2])$/.test(value);
+      function validate(value) {
+        if (!value || value.version !== 1 || !Array.isArray(value.months) ||
+            !value.months.every(validMonth) || value.months.length > 120 ||
+            new Set(value.months).size !== value.months.length ||
+            !value.updates || typeof value.updates !== 'object' ||
+            Array.isArray(value.updates)) throw new Error('Invalid monthly backup format.');
+        for (const [topic, updates] of Object.entries(value.updates)) {
+          if (!topicIds.includes(topic) || !updates || typeof updates !== 'object' ||
+              Array.isArray(updates)) throw new Error('Backup contains an unknown topic.');
+          for (const [month, text] of Object.entries(updates)) {
+            if (!value.months.includes(month) || typeof text !== 'string' ||
+                text.length > 10000) throw new Error('Invalid update text or month.');
+          }
+        }
+        return value;
+      }
+      function save() {
+        try {
+          localStorage.setItem(key, JSON.stringify(state));
+          feedback.textContent = 'Saved in this browser only. Export a backup to keep or move your updates.';
+          return true;
+        } catch (error) {
+          feedback.textContent = 'Browser save failed: ' + error.message +
+            '. Your current text is still on this page; export a backup before leaving.';
+          return false;
+        }
+      }
+      try {
+        const stored = localStorage.getItem(key);
+        if (stored) state = validate(JSON.parse(stored));
+      } catch (error) {
+        feedback.textContent = 'Could not load browser drafts: ' + error.message +
+          '. Existing storage has not been overwritten; restore a valid backup or export current text.';
+        // Avoid overwriting an unreadable draft when the user starts typing.
+        storageReadable = false;
+        document.getElementById('add-month').disabled = true;
+      }
+      if (!state.months.includes(initialMonth)) state.months.push(initialMonth);
+      function render(persist = true) {
+        cards.forEach((card, index) => {
+          card.querySelector('.monthly-updates')?.remove();
+          const group = document.createElement('div');
+          group.className = 'monthly-updates';
+          state.months.slice().sort().reverse().forEach(month => {
+            const entry = document.createElement('div');
+            entry.className = 'monthly-entry';
+            const heading = document.createElement('div');
+            heading.className = 'monthly-heading';
+            const label = document.createElement('label');
+            const id = 'update-' + index + '-' + month;
+            label.htmlFor = id;
+            label.textContent = names[Number(month.slice(5)) - 1] + ' ' + month.slice(0, 4);
+            const hint = document.createElement('small');
+            hint.textContent = 'Local draft';
+            const textarea = document.createElement('textarea');
+            textarea.id = id;
+            textarea.maxLength = 10000;
+            textarea.placeholder = 'Add progress, achievements, blockers and next steps…';
+            textarea.setAttribute('aria-label', topicIds[index] + ' — ' + label.textContent);
+            textarea.value = state.updates[topicIds[index]]?.[month] || '';
+            textarea.addEventListener('input', () => {
+              if (!state.updates[topicIds[index]]) state.updates[topicIds[index]] = {};
+              state.updates[topicIds[index]][month] = textarea.value;
+              if (persist && storageReadable) save();
+              else feedback.textContent = 'Editing in memory only because stored drafts could not be loaded. Export before leaving.';
+            });
+            heading.append(label, hint);
+            entry.append(heading, textarea);
+            group.append(entry);
+          });
+          card.querySelector('.project-header').after(group);
+        });
+      }
+      function wireExport() {
+        document.getElementById('export-updates').onclick = () => {
+          const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = 'fa3-monthly-updates-' + new Date().toISOString().slice(0, 10) + '.json';
+          link.click();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+          feedback.textContent = 'Backup exported. It may contain confidential text; keep it in approved internal storage.';
+        };
+      }
+      function wireImport() {
+        document.getElementById('import-updates').onchange = async event => {
+          const file = event.target.files[0];
+          if (!file) return;
+          try {
+            if (file.size > 2000000) throw new Error('Backup exceeds 2 MB.');
+            const imported = validate(JSON.parse(await file.text()));
+            if (!window.confirm('Replace current monthly drafts with this backup? Export your current drafts first if needed.')) return;
+            state = imported;
+            storageReadable = true;
+            if (!state.months.includes(initialMonth)) state.months.push(initialMonth);
+            document.getElementById('add-month').disabled = false;
+            render();
+            save();
+          } catch (error) {
+            feedback.textContent = 'Restore failed: ' + error.message;
+          } finally {
+            event.target.value = '';
+          }
+        };
+      }
+      document.getElementById('add-month').onclick = () => {
+        const month = document.getElementById('update-month').value;
+        if (!validMonth(month)) {
+          feedback.textContent = 'Choose a valid month between 2020 and 2099.';
+          return;
+        }
+        if (state.months.includes(month)) {
+          feedback.textContent = 'That month already exists under every topic.';
+          return;
+        }
+        if (state.months.length >= 120) {
+          feedback.textContent = 'Maximum 120 months reached. Export a backup before starting a new reporting archive.';
+          return;
+        }
+        state.months.push(month);
+        render();
+        save();
+      };
+      render();
+      wireExport();
+      wireImport();
+    })();
+  </script>
 </body>
 </html>
