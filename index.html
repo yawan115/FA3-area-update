@@ -373,6 +373,23 @@
     }
     .monthly-entry textarea:focus { outline: 2px solid #38bdf8; outline-offset: 2px; }
     #monthly-feedback { width: 100%; }
+    .month-nav { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 18px; }
+    .month-nav button {
+      cursor: pointer; border: 1px solid #475569; border-radius: 999px;
+      padding: 8px 16px; background: #172033; color: #cbd5e1; font: inherit;
+    }
+    .month-nav button[aria-pressed="true"] {
+      color: #082f49; background: #7dd3fc; border-color: #7dd3fc; font-weight: 700;
+    }
+    .snapshot-label { color: var(--muted); font-size: 12px; margin: -12px 0 14px; }
+    .monthly-tools { margin-top: 0; }
+    .month-note { color: var(--muted); font-size: 13px; margin-bottom: 20px; }
+    .project-card .monthly-entry textarea { min-height: 160px; }
+    .baseline-hidden { display: none !important; }
+    .project-card:has(.monthly-entry) { justify-content: flex-start; }
+    @media (max-width: 768px) {
+      .project-card[style*="grid-column"] { grid-column: auto !important; }
+    }
 
     /* Print & Responsive */
     @media (max-width: 1100px) {
@@ -399,11 +416,13 @@
         <p>Comprehensive status update across AI Platform Foundations, Cyber Supply-Chain Risk Control, Common Plan Data, and Second Cloud Readiness.</p>
       </div>
       <div style="font-size: 13px; color: var(--muted); text-align: right;">
-        <div>Reporting Period: <strong>October 2026 Update</strong></div>
+        <div>Reporting Period: <strong id="reporting-period">November 2026 Update</strong></div>
         <div style="margin-top: 4px;">4 Strategic Goals · 11 Active Workstreams</div>
       </div>
     </header>
 
+    <nav id="month-nav" class="month-nav" aria-label="Reporting month"></nav>
+    <p class="month-note">October is the original baseline. Later months show their own updates and do not carry over October progress.</p>
     <div class="monthly-tools">
       <label for="update-month">Monthly update</label>
       <input id="update-month" type="month" value="2026-11" min="2020-01" max="2099-12">
@@ -411,7 +430,7 @@
       <button id="export-updates" type="button">Export backup</button>
       <label for="import-updates">Restore backup</label>
       <input id="import-updates" type="file" accept=".json,application/json">
-      <span>Click any status tag to edit. Status and monthly notes are private browser drafts · not synced or published · export regularly. Unedited status is the October baseline.</span>
+      <span>Later-month notes and latest statuses can be edited. Changes are saved in this browser only, not synced or published. Export a backup regularly.</span>
       <div id="monthly-feedback" role="status" aria-live="polite"></div>
     </div>
 
@@ -419,26 +438,27 @@
     <div class="kpi-row">
       <div class="kpi-card g1">
         <div class="kpi-title">Goal 1 · AI & Risk</div>
-        <div class="kpi-value">4 Workstreams</div>
-        <div class="kpi-sub">SRE Agent POC, Testing POC Done, 1,709 Tables Audited</div>
+        <div class="kpi-value">1,578 Tables</div>
+        <div class="kpi-sub">26 tasks decommissioned · Second cleanup batch in owner confirmation</div>
       </div>
       <div class="kpi-card g2">
         <div class="kpi-title">Goal 2 · Cyber Supply-Chain</div>
-        <div class="kpi-value">28% Rollout</div>
-        <div class="kpi-sub">K8S/Istio Test Done · Prod Post-D11 Freeze · OIDC POC Done</div>
+        <div class="kpi-value">Production Upgrades</div>
+        <div class="kpi-sub">Kubernetes upgrades starting · Credential inventory under verification</div>
       </div>
       <div class="kpi-card g3">
         <div class="kpi-title">Goal 3 · Common Plan Data</div>
-        <div class="kpi-value">60% Tagging</div>
-        <div class="kpi-sub">Range Tagging +20% · Semantic Layer POC in Oct · Phase 2 Scope</div>
+        <div class="kpi-value">90% Tagging</div>
+        <div class="kpi-sub">Content AI tagging coverage · Semantic layer POC validated</div>
       </div>
       <div class="kpi-card g4">
         <div class="kpi-title">Goal 4 · Second Cloud</div>
-        <div class="kpi-value">Stage 1-2 Done</div>
-        <div class="kpi-sub">CDH Core Recovery Data Done · Huawei Cloud Sprint 3 Kickoff</div>
+        <div class="kpi-value">Infra Preparation</div>
+        <div class="kpi-sub">Huawei Cloud Terraform setup · Pilot service validation planned</div>
       </div>
     </div>
 
+    <p class="snapshot-label">Latest highlights · November 2026 snapshot; not automatically recalculated from drafts.</p>
     <!-- Goals Section -->
     <div class="goals-grid">
 
@@ -788,177 +808,7 @@
 
     </div>
   </div>
-  <script>
-    (() => {
-      const key = 'fa3-monthly-updates-v1';
-      const initialMonth = '2026-11';
-      const names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      const cards = [...document.querySelectorAll('.project-card')];
-      const topicIds = cards.map(card => card.querySelector('.project-name').textContent.trim());
-      const statusInputs = cards.map((card, index) => {
-        const tag = card.querySelector('.tag-status');
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.className = tag.className;
-        input.maxLength = 120;
-        input.defaultValue = tag.textContent.trim();
-        input.value = input.defaultValue;
-        input.setAttribute('aria-label', topicIds[index] + ' — latest status');
-        input.title = 'Edit latest status (saved in this browser only)';
-        tag.replaceWith(input);
-        input.addEventListener('input', () => {
-          if (!state.statuses) state.statuses = {};
-          state.statuses[topicIds[index]] = input.value;
-          if (storageReadable) save();
-          else feedback.textContent = 'Status edited in memory only. Export before leaving; stored drafts could not be loaded.';
-        });
-        return input;
-      });
-      const feedback = document.getElementById('monthly-feedback');
-      let state = { version: 1, months: [initialMonth], updates: {} };
-      let storageReadable = true;
-      const validMonth = value => typeof value === 'string' &&
-        /^(20\d{2})-(0[1-9]|1[0-2])$/.test(value);
-      function validate(value) {
-        if (!value || value.version !== 1 || !Array.isArray(value.months) ||
-            !value.months.every(validMonth) || value.months.length > 120 ||
-            new Set(value.months).size !== value.months.length ||
-            !value.updates || typeof value.updates !== 'object' ||
-            Array.isArray(value.updates)) throw new Error('Invalid monthly backup format.');
-        for (const [topic, updates] of Object.entries(value.updates)) {
-          if (!topicIds.includes(topic) || !updates || typeof updates !== 'object' ||
-              Array.isArray(updates)) throw new Error('Backup contains an unknown topic.');
-          for (const [month, text] of Object.entries(updates)) {
-            if (!value.months.includes(month) || typeof text !== 'string' ||
-                text.length > 10000) throw new Error('Invalid update text or month.');
-          }
-        }
-        if (value.statuses !== undefined) {
-          if (!value.statuses || typeof value.statuses !== 'object' ||
-              Array.isArray(value.statuses)) throw new Error('Invalid status backup format.');
-          for (const [topic, text] of Object.entries(value.statuses)) {
-            if (!topicIds.includes(topic) || typeof text !== 'string' ||
-                text.length > 120) throw new Error('Invalid topic status.');
-          }
-        }
-        return value;
-      }
-      function save() {
-        try {
-          localStorage.setItem(key, JSON.stringify(state));
-          feedback.textContent = 'Saved in this browser only. Export a backup to keep or move your updates.';
-          return true;
-        } catch (error) {
-          feedback.textContent = 'Browser save failed: ' + error.message +
-            '. Your current text is still on this page; export a backup before leaving.';
-          return false;
-        }
-      }
-      try {
-        const stored = localStorage.getItem(key);
-        if (stored) state = validate(JSON.parse(stored));
-      } catch (error) {
-        feedback.textContent = 'Could not load browser drafts: ' + error.message +
-          '. Existing storage has not been overwritten; restore a valid backup or export current text.';
-        // Avoid overwriting an unreadable draft when the user starts typing.
-        storageReadable = false;
-        document.getElementById('add-month').disabled = true;
-      }
-      if (!state.months.includes(initialMonth)) state.months.push(initialMonth);
-      function render(persist = true) {
-        statusInputs.forEach((input, index) => {
-          input.value = state.statuses?.[topicIds[index]] ?? input.defaultValue;
-        });
-        cards.forEach((card, index) => {
-          card.querySelector('.monthly-updates')?.remove();
-          const group = document.createElement('div');
-          group.className = 'monthly-updates';
-          state.months.slice().sort().reverse().forEach(month => {
-            const entry = document.createElement('div');
-            entry.className = 'monthly-entry';
-            const heading = document.createElement('div');
-            heading.className = 'monthly-heading';
-            const label = document.createElement('label');
-            const id = 'update-' + index + '-' + month;
-            label.htmlFor = id;
-            label.textContent = names[Number(month.slice(5)) - 1] + ' ' + month.slice(0, 4);
-            const hint = document.createElement('small');
-            hint.textContent = 'Local draft';
-            const textarea = document.createElement('textarea');
-            textarea.id = id;
-            textarea.maxLength = 10000;
-            textarea.placeholder = 'Add progress, achievements, blockers and next steps…';
-            textarea.setAttribute('aria-label', topicIds[index] + ' — ' + label.textContent);
-            textarea.value = state.updates[topicIds[index]]?.[month] || '';
-            textarea.addEventListener('input', () => {
-              if (!state.updates[topicIds[index]]) state.updates[topicIds[index]] = {};
-              state.updates[topicIds[index]][month] = textarea.value;
-              if (persist && storageReadable) save();
-              else feedback.textContent = 'Editing in memory only because stored drafts could not be loaded. Export before leaving.';
-            });
-            heading.append(label, hint);
-            entry.append(heading, textarea);
-            group.append(entry);
-          });
-          card.querySelector('.project-header').after(group);
-        });
-      }
-      function wireExport() {
-        document.getElementById('export-updates').onclick = () => {
-          const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = 'fa3-monthly-updates-' + new Date().toISOString().slice(0, 10) + '.json';
-          link.click();
-          setTimeout(() => URL.revokeObjectURL(url), 1000);
-          feedback.textContent = 'Backup exported. It may contain confidential text; keep it in approved internal storage.';
-        };
-      }
-      function wireImport() {
-        document.getElementById('import-updates').onchange = async event => {
-          const file = event.target.files[0];
-          if (!file) return;
-          try {
-            if (file.size > 2000000) throw new Error('Backup exceeds 2 MB.');
-            const imported = validate(JSON.parse(await file.text()));
-            if (!window.confirm('Replace current monthly drafts with this backup? Export your current drafts first if needed.')) return;
-            state = imported;
-            storageReadable = true;
-            if (!state.months.includes(initialMonth)) state.months.push(initialMonth);
-            document.getElementById('add-month').disabled = false;
-            render();
-            save();
-          } catch (error) {
-            feedback.textContent = 'Restore failed: ' + error.message;
-          } finally {
-            event.target.value = '';
-          }
-        };
-      }
-      document.getElementById('add-month').onclick = () => {
-        const month = document.getElementById('update-month').value;
-        if (!validMonth(month)) {
-          feedback.textContent = 'Choose a valid month between 2020 and 2099.';
-          return;
-        }
-        if (state.months.includes(month)) {
-          feedback.textContent = 'That month already exists under every topic.';
-          return;
-        }
-        if (state.months.length >= 120) {
-          feedback.textContent = 'Maximum 120 months reached. Export a backup before starting a new reporting archive.';
-          return;
-        }
-        state.months.push(month);
-        render();
-        save();
-      };
-      render();
-      wireExport();
-      wireImport();
-    })();
-  </script>
+  <script src="november-data.js"></script>
+  <script src="dashboard.js"></script>
 </body>
 </html>
